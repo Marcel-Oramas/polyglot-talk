@@ -13,11 +13,11 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
 
 ## Qué hace la app
 
-1. El usuario elige inglés, alemán o japonés y un escenario: pedir café, hacer el check-in en un hotel o preguntar por direcciones.
+1. El usuario elige inglés, alemán o japonés y un escenario predefinido, o escribe su propio tema o situación.
 2. El tutor inicia la conversación con una pregunta en el idioma elegido.
 3. El usuario escribe una respuesta en el chat.
 4. Gemini continúa la conversación y proporciona feedback en español sobre errores reales o formas más naturales de expresarse.
-5. El historial completo permanece visible durante la sesión. Al alcanzar diez turnos, la app resume los cuatro más antiguos; las solicitudes siguientes incluyen ese resumen y los seis turnos recientes. Al cambiar de idioma o escenario, empieza una conversación nueva.
+5. El historial completo permanece visible durante la sesión. Al alcanzar diez turnos, la app resume los cuatro más antiguos; las solicitudes siguientes incluyen ese resumen y los seis turnos recientes. Al cambiar de idioma o tema, empieza una conversación nueva.
 
 ## La pieza de IA
 

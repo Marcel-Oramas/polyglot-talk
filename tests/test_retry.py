@@ -151,6 +151,39 @@ class RetryFlowTests(unittest.TestCase):
         self.assertIsNone(app.session_state["retry_error"])
         self.assertEqual(self.models.models_used, ["gemini-3.8-flash"] * 3)
 
+    def test_custom_scenario_starts_and_resets_conversation(self) -> None:
+        app = self.run_app_with_responses(
+            [OPENING_RESPONSE, OPENING_RESPONSE, TUTOR_RESPONSE, OPENING_RESPONSE]
+        )
+
+        app.selectbox[1].select("Otro (tema personalizado)").run()
+        self.assertTrue(app.chat_input[0].disabled)
+        self.assertEqual(len(self.models.requests), 1)
+
+        app.text_input[0].set_value("una entrevista de trabajo").run()
+        self.assertEqual(len(app.session_state["messages"]), 1)
+        self.assertIn(
+            "una entrevista de trabajo",
+            self.models.requests[1][2].system_instruction,
+        )
+        self.assertFalse(app.chat_input[0].disabled)
+
+        app.chat_input[0].set_value("Tell me about the role").run()
+        self.assertEqual(len(app.session_state["messages"]), 3)
+        app.session_state["conversation_summary"] = "previous topic context"
+        app.session_state["summarized_message_count"] = 2
+
+        app.text_input[0].set_value("pedir comida en un restaurante").run()
+
+        self.assertEqual(len(app.session_state["messages"]), 1)
+        self.assertEqual(app.session_state["messages"][0]["content"], "Welcome!")
+        self.assertIn(
+            "pedir comida en un restaurante",
+            self.models.requests[3][2].system_instruction,
+        )
+        self.assertEqual(app.session_state["conversation_summary"], "")
+        self.assertEqual(app.session_state["summarized_message_count"], 0)
+
     def test_failed_retry_keeps_turn_available_without_duplicates(self) -> None:
         unavailable_errors = [self.make_unavailable_error() for _ in range(4)]
         app = self.run_app_with_responses(
