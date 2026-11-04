@@ -7,7 +7,7 @@ from google import genai
 from google.genai import errors, types
 from streamlit.errors import StreamlitSecretNotFoundError
 
-from chat_export import format_conversation_markdown, format_conversation_print_html
+from chat_export import format_conversation_print_html
 
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
@@ -223,13 +223,14 @@ scenario_option = st.sidebar.selectbox(
     "Selecciona un escenario:", [*SCENARIOS, CUSTOM_SCENARIO_OPTION]
 )
 if scenario_option == CUSTOM_SCENARIO_OPTION:
-    scenario = st.sidebar.text_input(
+    scenario = st.text_input(
         "Describe el tema o situación:",
-        placeholder="Ej.: una entrevista de trabajo",
         max_chars=160,
     ).strip()
     if not scenario:
-        st.sidebar.caption("Escribe un tema para iniciar la conversación.")
+        st.caption(
+            "Escribe un tema para iniciar la conversación. Máximo 160 caracteres."
+        )
 else:
     scenario = scenario_option
 
@@ -252,17 +253,12 @@ if st.sidebar.button("Reiniciar Conversación"):
 
 st.sidebar.subheader("Guardar o imprimir")
 messages = st.session_state.get("messages", [])
-st.sidebar.download_button(
-    "Descargar conversación",
-    data=format_conversation_markdown(
-        LANGUAGES[language_label],
-        scenario,
-        messages,
-    ),
-    file_name="polyglottalk-conversacion.md",
-    mime="text/markdown",
-    disabled=not messages,
-)
+has_student_message = any(message["role"] == "user" for message in messages)
+if not has_student_message:
+    st.sidebar.info(
+        "💬 Envía tu primer mensaje y luego podrás imprimir la conversación "
+        "o guardarla como PDF."
+    )
 with st.sidebar:
     components.html(
         format_conversation_print_html(
@@ -354,6 +350,9 @@ if user_input := st.chat_input(
     "Escribe tu respuesta aquí...",
     disabled=not api_key or not scenario or pending_retry_index is not None,
 ):
+    with st.chat_message("user"):
+        st.write(user_input)
+
     user_message = {"role": "user", "content": user_input, "feedback": None}
     try:
         request_messages = [*st.session_state.messages, user_message]

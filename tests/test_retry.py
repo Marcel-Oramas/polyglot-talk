@@ -1,4 +1,5 @@
 import os
+import tomllib
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -8,10 +9,7 @@ from google import genai
 from google.genai import errors
 from streamlit.testing.v1 import AppTest
 
-from chat_export import (
-    format_conversation_markdown,
-    format_conversation_print_html,
-)
+from chat_export import format_conversation_print_html
 
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
@@ -64,6 +62,15 @@ class RetryFlowTests(unittest.TestCase):
         )
         return retry_button.click().run()
 
+    def test_streamlit_theme_keeps_light_dark_and_system_choices(self) -> None:
+        config_path = APP_PATH.parent / ".streamlit" / "config.toml"
+        with config_path.open("rb") as config_file:
+            config = tomllib.load(config_file)
+
+        self.assertNotIn("base", config.get("theme", {}))
+        self.assertEqual(config["theme"]["light"]["primaryColor"], "#8795A8")
+        self.assertEqual(config["theme"]["dark"]["primaryColor"], "#AAB7C7")
+
     def test_retry_reuses_failed_user_message(self) -> None:
         app = self.run_app_with_responses(
             [
@@ -114,33 +121,39 @@ class RetryFlowTests(unittest.TestCase):
             ],
         )
         self.assertEqual(messages[1]["feedback"], "Looks good.")
+        self.assertEqual(
+            [message.proto.name for message in app.chat_message],
+            ["assistant", "user", "assistant"],
+        )
         self.assertIsNone(app.session_state["pending_retry_index"])
         self.assertFalse(app.error)
 
-    def test_conversation_can_be_downloaded_and_printed(self) -> None:
+    def test_conversation_can_be_printed(self) -> None:
         app = self.run_app_with_responses([OPENING_RESPONSE, TUTOR_RESPONSE])
+        initial_print_html = format_conversation_print_html(
+            "English",
+            "cafe",
+            app.session_state["messages"],
+        )
+        self.assertIn("disabled", initial_print_html)
+        self.assertTrue(
+            any("Envía tu primer mensaje" in item.value for item in app.info)
+        )
+
         app.chat_input[0].set_value("Hello").run()
 
-        download_button = app.get("download_button")[0]
-        self.assertEqual(download_button.proto.label, "Descargar conversación")
-        self.assertTrue(download_button.proto.url.endswith(".md"))
-        messages = app.session_state["messages"]
-        markdown = format_conversation_markdown(
+        print_html = format_conversation_print_html(
             "English",
-            "Pedir café",
-            messages,
+            "cafe",
+            app.session_state["messages"],
         )
-        self.assertIn("- **Idioma:** English", markdown)
-        self.assertIn("- **Tema:** Pedir café", markdown)
-        self.assertIn("## Tutor\n\nWelcome!", markdown)
-        self.assertIn("## Estudiante\n\nHello", markdown)
-        self.assertIn("**Feedback pedagógico:**\n\nLooks good.", markdown)
-
-        print_html = format_conversation_print_html("English", "cafe", messages)
         self.assertIn("window.print()", print_html)
         self.assertIn("Looks good.", print_html)
         self.assertIn("@media print", print_html)
+        self.assertNotIn("disabled", print_html)
+        self.assertFalse(app.get("download_button"))
         self.assertIn("Ctrl+P", app.sidebar.caption[-1].value)
+        self.assertFalse(any("Envía tu primer mensaje" in item.value for item in app.info))
 
     def test_service_unavailable_uses_fallback_model(self) -> None:
         app = self.run_app_with_responses(
