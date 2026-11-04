@@ -1,4 +1,3 @@
-```markdown
 # AGENTS.md · PolyglotTalk
 
 > Este fichero lo leen los agentes de programación (Copilot, Cursor, Codex, Gemini CLI y otros) antes de tocar vuestro código. Para Claude Code, cread un `CLAUDE.md` con una sola línea: `Sigue las instrucciones de AGENTS.md`. Para Gemini CLI, haced lo mismo con `GEMINI.md`.
@@ -37,4 +36,3 @@ Tutor de idiomas interactivo que permite practicar conversaciones cotidianas en 
 - No borres ni reescribas el README sin preguntar.
 - No cambies el modelo ni la arquitectura sin preguntar.
 - No hagas push ni despliegues sin que yo lo haya revisado.
-```
