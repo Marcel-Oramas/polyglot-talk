@@ -6,6 +6,8 @@ from google import genai
 from google.genai import errors, types
 from streamlit.errors import StreamlitSecretNotFoundError
 
+from chat_export import format_conversation_markdown
+
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
@@ -281,6 +283,19 @@ for message in st.session_state.get("messages", []):
         st.write(message["content"])
         if message.get("feedback"):
             st.info(f"💡 **Feedback Pedagógico:** {message['feedback']}")
+
+if st.session_state.get("messages"):
+    st.download_button(
+        "Descargar conversación",
+        data=format_conversation_markdown(
+            LANGUAGES[language_label],
+            scenario,
+            st.session_state.messages,
+        ),
+        file_name="polyglottalk-conversacion.md",
+        mime="text/markdown",
+    )
+    st.caption("Para imprimirla, abre el archivo descargado y usa Ctrl+P (Cmd+P en Mac).")
 
 pending_retry_index = st.session_state.get("pending_retry_index")
 if pending_retry_index is not None:

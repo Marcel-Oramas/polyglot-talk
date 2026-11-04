@@ -8,6 +8,8 @@ from google import genai
 from google.genai import errors
 from streamlit.testing.v1 import AppTest
 
+from chat_export import format_conversation_markdown
+
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 OPENING_RESPONSE = '{"tutor_reply":"Welcome!","feedback":""}'
@@ -111,6 +113,27 @@ class RetryFlowTests(unittest.TestCase):
         self.assertEqual(messages[1]["feedback"], "Looks good.")
         self.assertIsNone(app.session_state["pending_retry_index"])
         self.assertFalse(app.error)
+
+    def test_conversation_can_be_downloaded_and_printed(self) -> None:
+        app = self.run_app_with_responses([OPENING_RESPONSE, TUTOR_RESPONSE])
+        app.chat_input[0].set_value("Hello").run()
+
+        download_button = app.get("download_button")[0]
+        self.assertEqual(download_button.proto.label, "Descargar conversación")
+        self.assertTrue(
+            any("Ctrl+P" in caption.value for caption in app.caption)
+        )
+
+        markdown = format_conversation_markdown(
+            "English",
+            "Pedir café",
+            app.session_state["messages"],
+        )
+        self.assertIn("- **Idioma:** English", markdown)
+        self.assertIn("- **Tema:** Pedir café", markdown)
+        self.assertIn("## Tutor\n\nWelcome!", markdown)
+        self.assertIn("## Estudiante\n\nHello", markdown)
+        self.assertIn("**Feedback pedagógico:**\n\nLooks good.", markdown)
 
     def test_service_unavailable_uses_fallback_model(self) -> None:
         app = self.run_app_with_responses(

@@ -17,7 +17,7 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
 2. El tutor inicia la conversación con una pregunta en el idioma elegido.
 3. El usuario escribe una respuesta en el chat.
 4. Gemini continúa la conversación y proporciona feedback en español sobre errores reales o formas más naturales de expresarse.
-5. El historial completo permanece visible durante la sesión. Al alcanzar diez turnos, la app resume los cuatro más antiguos; las solicitudes siguientes incluyen ese resumen y los seis turnos recientes. Al cambiar de idioma o tema, empieza una conversación nueva.
+5. El historial completo permanece visible durante la sesión y se puede descargar como Markdown para guardarlo en otro lugar o imprimirlo. Al alcanzar diez turnos, la app resume los cuatro más antiguos; las solicitudes siguientes incluyen ese resumen y los seis turnos recientes. Al cambiar de idioma o tema, empieza una conversación nueva.
 
 ## La pieza de IA
 
@@ -49,7 +49,7 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
 | Quién la probó | Qué probó | Qué pasó | Qué cambié |
 |---|---|---|---|
 | Prueba manual en la app desplegada | Inicio y conversación con Gemini usando la clave configurada | La app respondió en el idioma elegido y presentó feedback pedagógico en español | Se confirmó el flujo funcional y se desplegó la aplicación |
-| Pruebas automatizadas locales (7 casos) | Turno normal, errores 429/503 y fallback, reintentos, cambio de configuración y resumen de chats largos | Los casos pasaron; los reintentos no duplican el mensaje y el contexto enviado se mantiene acotado | Se añadieron fallback, reintentos recuperables y resumen progresivo del historial |
+| Pruebas automatizadas locales (9 casos) | Turno normal, errores 429/503 y fallback, reintentos, cambio de configuración, temas personalizados, exportación y resumen de chats largos | Los casos pasaron; los reintentos no duplican el mensaje y el contexto enviado se mantiene acotado | Se añadieron fallback, reintentos recuperables, temas personalizados, resumen progresivo y descarga del historial |
 
 Las pruebas automatizadas usan respuestas simuladas para comprobar flujos y errores; la prueba manual en la app desplegada confirmó además la integración en vivo con Gemini.
 
