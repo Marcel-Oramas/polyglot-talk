@@ -2,11 +2,12 @@ import json
 import os
 
 import streamlit as st
+import streamlit.components.v1 as components
 from google import genai
 from google.genai import errors, types
 from streamlit.errors import StreamlitSecretNotFoundError
 
-from chat_export import format_conversation_markdown
+from chat_export import format_conversation_markdown, format_conversation_print_html
 
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
@@ -249,6 +250,34 @@ if st.sidebar.button("Reiniciar Conversación"):
     st.session_state.summarized_message_count = 0
     st.rerun()
 
+st.sidebar.subheader("Guardar o imprimir")
+messages = st.session_state.get("messages", [])
+st.sidebar.download_button(
+    "Descargar conversación",
+    data=format_conversation_markdown(
+        LANGUAGES[language_label],
+        scenario,
+        messages,
+    ),
+    file_name="polyglottalk-conversacion.md",
+    mime="text/markdown",
+    disabled=not messages,
+)
+with st.sidebar:
+    components.html(
+        format_conversation_print_html(
+            LANGUAGES[language_label],
+            scenario,
+            messages,
+        ),
+        height=48,
+        scrolling=False,
+    )
+    st.caption(
+        "Para guardar como PDF, elige «Guardar como PDF» al imprimir. "
+        "Atajo: Ctrl+P (Cmd+P en Mac)."
+    )
+
 api_key = get_api_key()
 if not api_key:
     st.info(
@@ -283,19 +312,6 @@ for message in st.session_state.get("messages", []):
         st.write(message["content"])
         if message.get("feedback"):
             st.info(f"💡 **Feedback Pedagógico:** {message['feedback']}")
-
-if st.session_state.get("messages"):
-    st.download_button(
-        "Descargar conversación",
-        data=format_conversation_markdown(
-            LANGUAGES[language_label],
-            scenario,
-            st.session_state.messages,
-        ),
-        file_name="polyglottalk-conversacion.md",
-        mime="text/markdown",
-    )
-    st.caption("Para imprimirla, abre el archivo descargado y usa Ctrl+P (Cmd+P en Mac).")
 
 pending_retry_index = st.session_state.get("pending_retry_index")
 if pending_retry_index is not None:
