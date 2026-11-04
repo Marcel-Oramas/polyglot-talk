@@ -1,11 +1,11 @@
 # PolyglotTalk
 
-**Enlace a la app:** Pendiente de despliegue
-**Autor/a:** Pendiente de completar
+**Enlace a la app:** [PolyglotTalk](https://polyglot-talk-8czv59mgrnbthwpa5amojn.streamlit.app/)
+**Autor/a:** [Marcel Oramas Alfonso](https://www.linkedin.com/in/Marcel-Oramas/)
 
 ## Pitch
 
-Quienes estudian un idioma suelen tener pocas oportunidades de practicar conversaciones cotidianas sin miedo a equivocarse. PolyglotTalk les permite practicar en inglés, alemán o japonés en escenarios como una cafetería, un hotel o la calle. Gemini mantiene la conversación en el idioma elegido y ofrece feedback constructivo en español después de cada respuesta. La prueba automatizada con respuestas simuladas confirmó el flujo de conversación y la presentación del feedback, pero todavía no se ha probado con una clave real de Gemini ni con estudiantes. El siguiente paso es probarlo con usuarios y desplegar la aplicación.
+Quienes estudian un idioma suelen tener pocas oportunidades de practicar conversaciones cotidianas sin miedo a equivocarse. PolyglotTalk les permite practicar en inglés, alemán o japonés en escenarios como una cafetería, un hotel o la calle. Gemini mantiene la conversación en el idioma elegido y ofrece feedback constructivo en español después de cada respuesta. La aplicación se probó exitosamente con Gemini y ya está desplegada. Las pruebas automatizadas también verifican el flujo del chat, los errores temporales y las conversaciones largas.
 
 ## El problema
 
@@ -28,7 +28,7 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
 ## Cómo la he construido
 
 - **Herramientas:** Python, Streamlit, SDK oficial `google-genai` y GitHub Copilot en VS Code.
-- **Fichero de contexto del agente:** No se encontró un `AGENTS.md` en esta copia del repositorio.
+- **Fichero de contexto del agente:** [`AGENTS.md`](./AGENTS.md), con instrucciones del proyecto y casos manuales de comprobación.
 - **Prompt clave del tutor:**
 
   ```text
@@ -42,15 +42,16 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
   En el primer turno, saluda como el personaje del escenario, formula una pregunta sencilla y deja feedback vacío.
   ```
 
-- **Qué delegué al agente y qué revisé a mano:** Se utilizó asistencia de Copilot para integrar Gemini y documentar la configuración. Se revisó el flujo de la aplicación y se validaron la carga sin clave y un turno de chat con respuestas simuladas; no se verificó una llamada en vivo a Gemini.
+- **Qué delegué al agente y qué revisé a mano:** Se utilizó asistencia de Copilot para integrar Gemini y documentar la configuración. Se revisó el flujo de la aplicación, se probaron las respuestas con Gemini en la app desplegada y se añadieron pruebas automatizadas con respuestas simuladas.
 
 ## Prueba y mejora
 
 | Quién la probó | Qué probó | Qué pasó | Qué cambié |
 |---|---|---|---|
-| Prueba automatizada local | Inicio sin clave y conversación con respuesta simulada | Se mostró la indicación para configurar la clave; el chat conservó la respuesta y mostró el feedback por separado | Se agregó manejo del caso sin archivo de secretos y mensajes visibles ante errores de Gemini |
+| Prueba manual en la app desplegada | Inicio y conversación con Gemini usando la clave configurada | La app respondió en el idioma elegido y presentó feedback pedagógico en español | Se confirmó el flujo funcional y se desplegó la aplicación |
+| Pruebas automatizadas locales (7 casos) | Turno normal, errores 429/503 y fallback, reintentos, cambio de configuración y resumen de chats largos | Los casos pasaron; los reintentos no duplican el mensaje y el contexto enviado se mantiene acotado | Se añadieron fallback, reintentos recuperables y resumen progresivo del historial |
 
-La prueba automatizada no reemplaza una prueba con usuarios ni una llamada real a la API.
+Las pruebas automatizadas usan respuestas simuladas para comprobar flujos y errores; la prueba manual en la app desplegada confirmó además la integración en vivo con Gemini.
 
 ## Ejecutar en local
 
