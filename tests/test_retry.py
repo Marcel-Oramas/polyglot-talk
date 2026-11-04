@@ -94,6 +94,63 @@ class RetryFlowTests(unittest.TestCase):
             ],
         )
 
+    def test_normal_turn_saves_user_feedback_and_tutor_reply(self) -> None:
+        app = self.run_app_with_responses([OPENING_RESPONSE, TUTOR_RESPONSE])
+
+        app.chat_input[0].set_value("Hello").run()
+
+        messages = app.session_state["messages"]
+        self.assertEqual(
+            [(message["role"], message["content"]) for message in messages],
+            [
+                ("assistant", "Welcome!"),
+                ("user", "Hello"),
+                ("assistant", "Sure!"),
+            ],
+        )
+        self.assertEqual(messages[1]["feedback"], "Looks good.")
+        self.assertIsNone(app.session_state["pending_retry_index"])
+        self.assertFalse(app.error)
+
+    def test_service_unavailable_uses_fallback_model(self) -> None:
+        app = self.run_app_with_responses(
+            [OPENING_RESPONSE, self.make_unavailable_error(), TUTOR_RESPONSE]
+        )
+
+        app.chat_input[0].set_value("Hello").run()
+
+        self.assertEqual(
+            self.models.models_used,
+            [
+                "gemini-3.8-flash",
+                "gemini-3.8-flash",
+                "gemini-3.5-flash-lite",
+            ],
+        )
+        self.assertEqual(app.session_state["messages"][-1]["content"], "Sure!")
+
+    def test_changing_settings_starts_a_clean_conversation(self) -> None:
+        app = self.run_app_with_responses(
+            [OPENING_RESPONSE, TUTOR_RESPONSE, OPENING_RESPONSE]
+        )
+        app.chat_input[0].set_value("Hello").run()
+        app.session_state["conversation_summary"] = "old context"
+        app.session_state["summarized_message_count"] = 2
+        app.session_state["pending_retry_index"] = 1
+        app.session_state["retry_error"] = "temporary error"
+
+        app.selectbox[1].select("Hacer el check-in en un hotel").run()
+
+        messages = app.session_state["messages"]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["role"], "assistant")
+        self.assertEqual(messages[0]["content"], "Welcome!")
+        self.assertEqual(app.session_state["conversation_summary"], "")
+        self.assertEqual(app.session_state["summarized_message_count"], 0)
+        self.assertIsNone(app.session_state["pending_retry_index"])
+        self.assertIsNone(app.session_state["retry_error"])
+        self.assertEqual(self.models.models_used, ["gemini-3.8-flash"] * 3)
+
     def test_failed_retry_keeps_turn_available_without_duplicates(self) -> None:
         unavailable_errors = [self.make_unavailable_error() for _ in range(4)]
         app = self.run_app_with_responses(
