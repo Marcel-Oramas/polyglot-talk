@@ -1,73 +1,202 @@
+import json
+import os
 
 import streamlit as st
-import random
+from google import genai
+from google.genai import errors, types
+from streamlit.errors import StreamlitSecretNotFoundError
 
-# Configuración de página
-st.set_page_config(page_title="PolyglotTalk - Tutor de Idiomas", page_icon="🗣️", layout="centered")
 
-# Título y descripción
-st.title("🗣️ PolyglotTalk")
-st.subheader("Tu Tutor de Idiomas Inteligente")
-st.write("Practica conversaciones de la vida real en inglés, alemán o japonés con feedback constructivo al instante.")
-
-# Sidebar para selección de idioma y escenario
-st.sidebar.header("Configuración del Tutor")
-idioma = st.sidebar.selectbox("Selecciona el idioma:", ["Inglés 🇬🇧", "Alemán 🇩🇪", "Japonés 🇯🇵"])
-escenario = st.sidebar.selectbox("Selecciona un escenario:", [
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+LANGUAGES = {
+    "Inglés 🇬🇧": "English",
+    "Alemán 🇩🇪": "German",
+    "Japonés 🇯🇵": "Japanese",
+}
+SCENARIOS = [
     "Pedir café en una cafetería",
     "Hacer el check-in en un hotel",
-    "Preguntar por direcciones en la calle"
-])
+    "Preguntar por direcciones en la calle",
+]
+RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "tutor_reply": {
+            "type": "STRING",
+            "description": "The tutor's next conversational message in the target language.",
+        },
+        "feedback": {
+            "type": "STRING",
+            "description": "Constructive language feedback in Spanish, or an empty string for the opening.",
+        },
+    },
+    "required": ["tutor_reply", "feedback"],
+}
+SYSTEM_INSTRUCTION = """Eres PolyglotTalk, un tutor de idiomas empático para estudiantes de nivel básico a intermedio.
+Mantén la conversación dentro del escenario indicado y responde en el idioma objetivo.
+Después de cada respuesta del estudiante, da feedback breve y concreto en español:
+señala errores reales de gramática, ortografía o naturalidad, ofrece una corrección o alternativa
+natural y anima al estudiante. Si no hay errores, dilo claramente y destaca algo que hizo bien.
+No inventes errores. El feedback no debe sustituir la continuación de la conversación.
+Devuelve únicamente el objeto JSON con tutor_reply y feedback solicitado por el formato de respuesta.
+En el primer turno, saluda como el personaje del escenario, formula una pregunta sencilla y deja feedback vacío."""
 
-# Inicializar historial de chat en el estado de Streamlit
-if "messages" not in st.session_state:
+
+def get_api_key() -> str | None:
+    try:
+        secret_api_key = st.secrets["GEMINI_API_KEY"]
+    except (KeyError, StreamlitSecretNotFoundError):
+        secret_api_key = None
+    return secret_api_key or os.getenv("GEMINI_API_KEY")
+
+
+def make_contents(messages: list[dict[str, str | None]]) -> list[dict[str, object]]:
+    contents: list[dict[str, object]] = []
+    for message in messages:
+        role = "user" if message["role"] == "user" else "model"
+        contents.append(
+            {"role": role, "parts": [{"text": str(message["content"])}]}
+        )
+        feedback = message.get("feedback")
+        if feedback:
+            contents.append(
+                {
+                    "role": "model",
+                    "parts": [{"text": f"Feedback anterior: {feedback}"}],
+                }
+            )
+    return contents
+
+
+def generate_tutor_turn(
+    client: genai.Client,
+    language: str,
+    scenario: str,
+    messages: list[dict[str, str | None]],
+    opening: bool = False,
+) -> dict[str, str]:
+    contents = make_contents(messages)
+    if opening:
+        contents.append(
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": "Inicia una conversación de práctica en este escenario. "
+                        "Saluda y haz una pregunta sencilla.",
+                    }
+                ],
+            }
+        )
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=(
+                f"{SYSTEM_INSTRUCTION}\nIdioma objetivo: {language}.\n"
+                f"Escenario: {scenario}."
+            ),
+            response_mime_type="application/json",
+            response_schema=RESPONSE_SCHEMA,
+        ),
+    )
+    try:
+        result = json.loads(response.text or "")
+    except json.JSONDecodeError as exc:
+        raise ValueError("Gemini devolvió una respuesta que no se pudo interpretar.") from exc
+
+    if (
+        not isinstance(result, dict)
+        or not isinstance(result.get("tutor_reply"), str)
+        or not result["tutor_reply"].strip()
+        or not isinstance(result.get("feedback"), str)
+    ):
+        raise ValueError("Gemini devolvió una respuesta incompleta. Inténtalo de nuevo.")
+    return result
+
+
+st.set_page_config(
+    page_title="PolyglotTalk - Tutor de Idiomas", page_icon="🗣️", layout="centered"
+)
+st.title("🗣️ PolyglotTalk")
+st.subheader("Tu Tutor de Idiomas Inteligente")
+st.write(
+    "Practica conversaciones de la vida real en inglés, alemán o japonés "
+    "con feedback constructivo al instante."
+)
+
+st.sidebar.header("Configuración del Tutor")
+language_label = st.sidebar.selectbox("Selecciona el idioma:", list(LANGUAGES))
+scenario = st.sidebar.selectbox("Selecciona un escenario:", SCENARIOS)
+
+settings = (language_label, scenario)
+if st.session_state.get("conversation_settings") != settings:
     st.session_state.messages = []
-    # Mensaje de bienvenida del Tutor simulando la IA (Versión 0)
-    bienvenidas = {
-        "Inglés 🇬🇧": "Hello! I will be your tutor today. Let's practice ordering coffee. What would you like to have?",
-        "Alemán 🇩🇪": "Hallo! Ich bin dein Lehrer heute. Lass uns üben, Kaffee zu bestellen. Was möchtest du trinken?",
-        "Japonés 🇯🇵": "こんにちは！今日の講師です。カフェでの注文を練習しましょう。何になさいますか？"
-    }
-    st.session_state.messages.append({"role": "assistant", "content": bienvenidas[idioma], "feedback": None})
+    st.session_state.conversation_settings = settings
 
-# Reiniciar chat si cambia el idioma o escenario
 if st.sidebar.button("Reiniciar Conversación"):
     st.session_state.messages = []
     st.rerun()
 
-# Mostrar historial de chat
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-        # Si el mensaje del usuario tiene feedback simulado, mostrarlo en una caja amigable
-        if msg.get("feedback"):
-            st.info(f"💡 **Feedback Pedagógico:** {msg['feedback']}")
+api_key = get_api_key()
+if not api_key:
+    st.info(
+        "Para empezar, configura `GEMINI_API_KEY` como variable de entorno o "
+        "en `.streamlit/secrets.toml`. Consulta `README.md` para más detalles."
+    )
+else:
+    client = genai.Client(api_key=api_key)
+    if not st.session_state.messages:
+        try:
+            opening_turn = generate_tutor_turn(
+                client,
+                LANGUAGES[language_label],
+                scenario,
+                [],
+                opening=True,
+            )
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": opening_turn["tutor_reply"],
+                    "feedback": None,
+                }
+            )
+        except (errors.APIError, ValueError) as exc:
+            st.error(f"No se pudo iniciar la conversación con Gemini: {exc}")
 
-# Entrada de chat para el usuario
-if user_input := st.chat_input("Escribe tu respuesta aquí..."):
-    # Mostrar el mensaje del usuario
+for message in st.session_state.get("messages", []):
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+        if message.get("feedback"):
+            st.info(f"💡 **Feedback Pedagógico:** {message['feedback']}")
+
+if user_input := st.chat_input("Escribe tu respuesta aquí...", disabled=not api_key):
     with st.chat_message("user"):
         st.write(user_input)
-    
-    # Generar Feedback Simulado y Respuesta de la IA para Versión 0
-    feedback_simulado = ""
-    next_response = ""
-    
-    if "inglés" in idioma.lower():
-        feedback_simulado = "Tu frase es comprensible. Intenta usar 'I would like to order...' en lugar de estructuras directas para sonar más natural y cortés."
-        next_response = "Great choice! Would you like that with sugar or milk?"
-    elif "alemán" in idioma.lower():
-        feedback_simulado = "¡Buen intento! Recuerda capitalizar los sustantivos como 'Kaffee'. Podrías decir: 'Ich möchte einen Kaffee bestellen'."
-        next_response = "Sehr gut! Möchten Sie Milch oder Zucker dazu?"
-    else:
-        feedback_simulado = "Gramática excelente. En situaciones cotidianas, usar la forma cortés '〜をお願いします' (o-negai shimasu) es perfecto."
-        next_response = "かしこまりました。お飲み物はホットですか、アイスですか？"
 
-    # Añadir entrada de usuario al historial
-    st.session_state.messages.append({"role": "user", "content": user_input, "feedback": feedback_simulado})
-    
-    # Añadir respuesta de IA al historial
-    st.session_state.messages.append({"role": "assistant", "content": next_response, "feedback": None})
-    
-    # Recargar la app para actualizar la interfaz
-    st.rerun()
+    user_message = {"role": "user", "content": user_input, "feedback": None}
+    try:
+        tutor_turn = generate_tutor_turn(
+            client,
+            LANGUAGES[language_label],
+            scenario,
+            [*st.session_state.messages, user_message],
+        )
+    except (errors.APIError, ValueError) as exc:
+        st.session_state.messages.append(user_message)
+        st.error(f"No se pudo obtener una respuesta de Gemini: {exc}")
+    else:
+        user_message["feedback"] = tutor_turn["feedback"]
+        st.session_state.messages.extend(
+            [
+                user_message,
+                {
+                    "role": "assistant",
+                    "content": tutor_turn["tutor_reply"],
+                    "feedback": None,
+                },
+            ]
+        )
+        st.rerun()
