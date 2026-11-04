@@ -1,6 +1,6 @@
 # PolyglotTalk
 
-**Enlace a la app:** [PolyglotTalk](https://polyglot-talk-8czv59mgrnbthwpa5amojn.streamlit.app/)
+**Enlace a la app:** [PolyglotTalk](https://polyglot-talk.streamlit.app/)
 **Autor/a:** [Marcel Oramas Alfonso](https://www.linkedin.com/in/Marcel-Oramas/)
 
 ## Pitch
