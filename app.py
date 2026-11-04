@@ -98,24 +98,25 @@ def generate_tutor_turn(
         response_mime_type="application/json",
         response_schema=RESPONSE_SCHEMA,
     )
-    try:
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=contents,
-            config=config,
-        )
-    except errors.APIError as exc:
-        if exc.code != 503 or MODEL == FALLBACK_MODEL:
-            raise
-        response = client.models.generate_content(
-            model=FALLBACK_MODEL,
-            contents=contents,
-            config=config,
-        )
-        st.warning(
-            f"El modelo principal está temporalmente ocupado. "
-            f"Esta respuesta se generó con el modelo alternativo {FALLBACK_MODEL}."
-        )
+    with st.spinner("El tutor está pensando..."):
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=contents,
+                config=config,
+            )
+        except errors.APIError as exc:
+            if exc.code != 503 or MODEL == FALLBACK_MODEL:
+                raise
+            response = client.models.generate_content(
+                model=FALLBACK_MODEL,
+                contents=contents,
+                config=config,
+            )
+            st.warning(
+                f"El modelo principal está temporalmente ocupado. "
+                f"Esta respuesta se generó con el modelo alternativo {FALLBACK_MODEL}."
+            )
 
     try:
         result = json.loads(response.text or "")
