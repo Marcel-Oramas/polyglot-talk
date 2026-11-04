@@ -49,7 +49,7 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
 | Quién la probó | Qué probó | Qué pasó | Qué cambié |
 |---|---|---|---|
 | Prueba manual en la app desplegada | Inicio y conversación con Gemini usando la clave configurada | La app respondió en el idioma elegido y presentó feedback pedagógico en español | Se confirmó el flujo funcional y se desplegó la aplicación |
-| Pruebas automatizadas locales (9 casos) | Turno normal, errores 429/503 y fallback, reintentos, cambio de configuración, temas personalizados, impresión y resumen de chats largos | Los casos pasaron; los reintentos no duplican el mensaje y el contexto enviado se mantiene acotado | Se añadieron fallback, reintentos recuperables, temas personalizados, resumen progresivo y la opción de imprimir el historial |
+| Pruebas automatizadas locales (10 casos) | Turno normal, errores 429/503 y fallback, reintentos, cambio de configuración, temas personalizados, impresión y resumen de chats largos | Los casos pasaron; los reintentos no duplican el mensaje y el contexto enviado se mantiene acotado | Se añadieron fallback, reintentos recuperables, temas personalizados, resumen progresivo y la opción de imprimir el historial |
 
 Las pruebas automatizadas usan respuestas simuladas para comprobar flujos y errores; la prueba manual en la app desplegada confirmó además la integración en vivo con Gemini.
 
@@ -84,4 +84,18 @@ Opcionalmente, selecciona otros modelos definiendo `GEMINI_MODEL` y `GEMINI_FALL
 
 ## Capturas
 
-Pendientes: agregar capturas de la app en funcionamiento, un caso límite y la prueba, sin mostrar ninguna clave.
+### La app en funcionamiento
+
+![Conversación en inglés con feedback pedagógico en PolyglotTalk](./docs/screenshots/app-funcionando.png)
+
+### Un caso límite: pregunta fuera del escenario
+
+![Ante la pregunta «What's the meaning of life and the universe?», el tutor mantiene la conversación en el escenario de la cafetería](./docs/screenshots/caso-limite-desvio-de-escenario.png)
+
+### Trabajo con Copilot
+
+![Sesión de trabajo con Copilot en VS Code](./docs/screenshots/trabajo-con-copilot.png)
+
+### Pruebas automatizadas
+
+![Validación de pruebas durante una sesión de trabajo anterior](./docs/screenshots/validacion-con-pruebas.png)
