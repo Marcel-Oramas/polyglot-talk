@@ -21,7 +21,7 @@ Los estudiantes de nivel básico e intermedio necesitan practicar respuestas esp
 
 ## La pieza de IA
 
-- **Qué usa:** API de Gemini mediante el SDK oficial `google-genai`. El modelo predeterminado es `gemini-3.8-flash`; se puede cambiar con la variable `GEMINI_MODEL`. Si responde con un error 503, la app reintenta una vez con `gemini-3.5-flash-lite`, configurable con `GEMINI_FALLBACK_MODEL`.
+- **Qué usa:** API de Gemini mediante el SDK oficial `google-genai`. El modelo predeterminado es `gemini-3.8-flash`; se puede cambiar con la variable `GEMINI_MODEL`. Si responde con un error 429 (límite de solicitudes) o 503 (servicio temporalmente no disponible), la app reintenta una vez con `gemini-3.5-flash-lite`, configurable con `GEMINI_FALLBACK_MODEL`.
 - **Por qué esa opción:** Gemini permite generar una respuesta conversacional y feedback multilingüe en la misma llamada. La salida estructurada separa el mensaje del tutor del feedback pedagógico.
 - **Qué pasa si falla:** La aplicación muestra un aviso si falta la clave o si Gemini devuelve un error. La clave se lee en el servidor desde `GEMINI_API_KEY`, ya sea como variable de entorno o mediante los secretos de Streamlit; no se incluye en el frontend.
 

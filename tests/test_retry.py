@@ -37,6 +37,11 @@ class RetryFlowTests(unittest.TestCase):
             503, {"error": {"message": "busy", "status": "UNAVAILABLE"}}
         )
 
+    def make_rate_limit_error(self) -> errors.ClientError:
+        return errors.ClientError(
+            429, {"error": {"message": "rate limited", "status": "RESOURCE_EXHAUSTED"}}
+        )
+
     def run_app_with_responses(self, responses: list[str | errors.APIError]) -> AppTest:
         self.models = FakeModels(responses)
         self.client = SimpleNamespace(models=self.models)
@@ -110,6 +115,28 @@ class RetryFlowTests(unittest.TestCase):
         self.assertEqual(app.session_state["messages"][1]["content"], "Hello")
         self.assertEqual(app.session_state["messages"][2]["content"], "Sure!")
         self.assertIsNone(app.session_state["pending_retry_index"])
+
+    def test_rate_limit_uses_fallback_model(self) -> None:
+        app = self.run_app_with_responses(
+            [
+                OPENING_RESPONSE,
+                self.make_rate_limit_error(),
+                TUTOR_RESPONSE,
+            ]
+        )
+
+        app.chat_input[0].set_value("Hello").run()
+
+        self.assertEqual(
+            self.models.models_used,
+            [
+                "gemini-3.8-flash",
+                "gemini-3.8-flash",
+                "gemini-3.5-flash-lite",
+            ],
+        )
+        self.assertEqual(len(app.session_state["messages"]), 3)
+        self.assertEqual(app.session_state["messages"][-1]["content"], "Sure!")
 
 
 if __name__ == "__main__":

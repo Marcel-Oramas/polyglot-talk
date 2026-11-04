@@ -106,7 +106,7 @@ def generate_tutor_turn(
                 config=config,
             )
         except errors.APIError as exc:
-            if exc.code != 503 or MODEL == FALLBACK_MODEL:
+            if exc.code not in (429, 503) or MODEL == FALLBACK_MODEL:
                 raise
             response = client.models.generate_content(
                 model=FALLBACK_MODEL,
@@ -114,7 +114,7 @@ def generate_tutor_turn(
                 config=config,
             )
             st.warning(
-                f"El modelo principal está temporalmente ocupado. "
+                f"El modelo principal está temporalmente ocupado o limitado. "
                 f"Esta respuesta se generó con el modelo alternativo {FALLBACK_MODEL}."
             )
 
