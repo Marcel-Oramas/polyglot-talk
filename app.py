@@ -151,9 +151,13 @@ settings = (language_label, scenario)
 if st.session_state.get("conversation_settings") != settings:
     st.session_state.messages = []
     st.session_state.conversation_settings = settings
+    st.session_state.pending_retry_index = None
+    st.session_state.retry_error = None
 
 if st.sidebar.button("Reiniciar Conversación"):
     st.session_state.messages = []
+    st.session_state.pending_retry_index = None
+    st.session_state.retry_error = None
     st.rerun()
 
 api_key = get_api_key()
@@ -189,10 +193,43 @@ for message in st.session_state.get("messages", []):
         if message.get("feedback"):
             st.info(f"💡 **Feedback Pedagógico:** {message['feedback']}")
 
-if user_input := st.chat_input("Escribe tu respuesta aquí...", disabled=not api_key):
-    with st.chat_message("user"):
-        st.write(user_input)
+pending_retry_index = st.session_state.get("pending_retry_index")
+if pending_retry_index is not None:
+    if st.session_state.get("retry_error"):
+        st.error(
+            "No se pudo obtener una respuesta de Gemini: "
+            f"{st.session_state.retry_error}"
+        )
 
+    if st.button("Reintentar respuesta", disabled=not api_key):
+        try:
+            tutor_turn = generate_tutor_turn(
+                client,
+                LANGUAGES[language_label],
+                scenario,
+                st.session_state.messages,
+            )
+        except (errors.APIError, ValueError) as exc:
+            st.session_state.retry_error = str(exc)
+            st.rerun()
+        else:
+            pending_message = st.session_state.messages[pending_retry_index]
+            pending_message["feedback"] = tutor_turn["feedback"]
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": tutor_turn["tutor_reply"],
+                    "feedback": None,
+                }
+            )
+            st.session_state.pending_retry_index = None
+            st.session_state.retry_error = None
+            st.rerun()
+
+if user_input := st.chat_input(
+    "Escribe tu respuesta aquí...",
+    disabled=not api_key or pending_retry_index is not None,
+):
     user_message = {"role": "user", "content": user_input, "feedback": None}
     try:
         tutor_turn = generate_tutor_turn(
@@ -203,7 +240,9 @@ if user_input := st.chat_input("Escribe tu respuesta aquí...", disabled=not api
         )
     except (errors.APIError, ValueError) as exc:
         st.session_state.messages.append(user_message)
-        st.error(f"No se pudo obtener una respuesta de Gemini: {exc}")
+        st.session_state.pending_retry_index = len(st.session_state.messages) - 1
+        st.session_state.retry_error = str(exc)
+        st.rerun()
     else:
         user_message["feedback"] = tutor_turn["feedback"]
         st.session_state.messages.extend(
