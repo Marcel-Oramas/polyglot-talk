@@ -7,7 +7,7 @@ from google.genai import errors, types
 from streamlit.errors import StreamlitSecretNotFoundError
 
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 LANGUAGES = {
     "Inglés 🇬🇧": "English",
     "Alemán 🇩🇪": "German",
