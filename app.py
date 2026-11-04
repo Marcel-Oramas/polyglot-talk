@@ -8,6 +8,7 @@ from streamlit.errors import StreamlitSecretNotFoundError
 
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
 LANGUAGES = {
     "Inglés 🇬🇧": "English",
     "Alemán 🇩🇪": "German",
@@ -89,18 +90,33 @@ def generate_tutor_turn(
             }
         )
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=(
-                f"{SYSTEM_INSTRUCTION}\nIdioma objetivo: {language}.\n"
-                f"Escenario: {scenario}."
-            ),
-            response_mime_type="application/json",
-            response_schema=RESPONSE_SCHEMA,
+    config = types.GenerateContentConfig(
+        system_instruction=(
+            f"{SYSTEM_INSTRUCTION}\nIdioma objetivo: {language}.\n"
+            f"Escenario: {scenario}."
         ),
+        response_mime_type="application/json",
+        response_schema=RESPONSE_SCHEMA,
     )
+    try:
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=contents,
+            config=config,
+        )
+    except errors.APIError as exc:
+        if exc.code != 503 or MODEL == FALLBACK_MODEL:
+            raise
+        response = client.models.generate_content(
+            model=FALLBACK_MODEL,
+            contents=contents,
+            config=config,
+        )
+        st.warning(
+            f"El modelo principal está temporalmente ocupado. "
+            f"Esta respuesta se generó con el modelo alternativo {FALLBACK_MODEL}."
+        )
+
     try:
         result = json.loads(response.text or "")
     except json.JSONDecodeError as exc:
